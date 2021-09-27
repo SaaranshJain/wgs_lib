@@ -1,0 +1,17 @@
+{
+    "name": "wgs_lib",
+    "version": "1.0.0",
+    "main": "index.js",
+    "repository": "https://www.github.com/SaaranshJain/wgs_lib",
+    "author": "SaaranshJain <mr.saaransh.jain@gmail.com>",
+    "license": "MIT",
+    "scripts": {
+        "dev": "node dev.js",
+        "start": "node start.js",
+        "pretty": "prettier --write ."
+    },
+    "devDependencies": {
+        "concurrently": "^6.2.1",
+        "prettier": "^2.4.1"
+    }
+}
