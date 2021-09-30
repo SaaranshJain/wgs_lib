@@ -2,5 +2,9 @@
     "name": "server",
     "version": "1.0.0",
     "main": "index.js",
-    "license": "MIT"
+    "license": "MIT",
+    "scripts": {
+        "start": "uvicorn main:app",
+        "dev": "uvicorn main:app --reload"
+    }
 }
