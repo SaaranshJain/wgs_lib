@@ -1,3 +1,6 @@
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 
