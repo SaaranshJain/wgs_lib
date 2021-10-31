@@ -1,13 +1,22 @@
 import { Box, Button, TextField } from '@mui/material';
 import type { NextPage } from 'next';
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import axios from 'axios';
 import { FormEvent } from 'react-transition-group/node_modules/@types/react';
 
 const UploadPage: NextPage = () => {
     const [title, setTitle] = useState('');
-    const [chosenFile, setChosenFile] = useState('No file chosen');
+    const [chosenFileName, setChosenFileName] = useState('No file chosen');
+    const [file, setFile] = useState<File | null>(null);
     const [choices, setChoices] = useState<string[]>([]);
+
+    const handleChange = (ev: ChangeEvent<HTMLInputElement>) => {
+        setChosenFileName(ev.target.value.split(/fakepath(\/|\\)/gi)[2] ?? 'No file chosen');
+
+        if (ev.target.files?.[0]) {
+            setFile(ev.target.files[0]);
+        }
+    };
 
     return (
         <Box
@@ -18,8 +27,16 @@ const UploadPage: NextPage = () => {
             noValidate
             autoComplete="off"
             style={{ marginTop: '6rem', marginLeft: '2rem' }}
-            onSubmit={(ev: FormEvent) => {
+            onSubmit={async (ev: FormEvent) => {
                 ev.preventDefault();
+
+                if (!file) {
+                    return;
+                }
+
+                const body = new FormData();
+                body.append('file', file);
+                await axios.post('http://localhost:8000/file', body);
             }}
         >
             <TextField
@@ -52,13 +69,9 @@ const UploadPage: NextPage = () => {
             <br />
             <Button variant="contained" component="label">
                 Choose File
-                <input
-                    type="file"
-                    hidden
-                    onChange={ev => setChosenFile(ev.target.value.split(/fakepath(\/|\\)/gi)[2] ?? 'No file chosen')}
-                />
+                <input type="file" hidden onChange={handleChange} />
             </Button>
-            <label>{chosenFile}</label>
+            <label>{chosenFileName}</label>
             <br />
             <Button variant="contained" type="submit">
                 Upload

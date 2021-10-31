@@ -1,7 +1,7 @@
-import pymysql
-pymysql.install_as_MySQLdb()
+from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from fastapi import FastAPI
 from pydantic import BaseModel
 
 from sqlalchemy.engine import create_engine
@@ -15,11 +15,26 @@ from sqlalchemy import select
 from uuid import uuid4 as uuid
 import bcrypt
 
-engine = create_engine("mariadb://root:@localhost/wgs_lib", echo=True)
+engine = create_engine("mariadb://admin:@localhost/wgs_lib", echo=True)
 session: Session = sessionmaker(bind=engine)()
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 Base = declarative_base()
+
+
+origins = [
+    "http://localhost:8080",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class User(Base):
@@ -73,5 +88,18 @@ async def login(user: LoginUser):
     if bcrypt.checkpw(user.password.encode('utf8'), res.password):
         return {"Pog": "kek"}
 
+
+@app.post("/file/")
+async def create_upload_file(file: UploadFile = File(...)):
+    with open(f"./static/{file.filename}", "wb") as f:
+        f.write(await file.read())
+
+
+@app.get("/")
+async def home():
+    return {"hello": "henlo!"}
+
+
 meta: MetaData = Base.metadata
 meta.create_all(engine)
+print(app)
