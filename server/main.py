@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -19,12 +19,12 @@ engine = create_engine("mariadb://admin:@localhost/wgs_lib", echo=True)
 session: Session = sessionmaker(bind=engine)()
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/books", StaticFiles(directory="books"), name="books")
 Base = declarative_base()
 
 
 origins = [
-    "http://localhost:8080",
+    "http://localhost:8000",
     "http://localhost:3000",
 ]
 
@@ -37,69 +37,34 @@ app.add_middleware(
 )
 
 
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(String(36), primary_key=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(320), nullable=False, unique=True)
-    password = Column(LargeBinary(), nullable=False)
-    booksuploaded = relationship('Book')
-
-
 class Book(Base):
     __tablename__ = 'books'
     id = Column(String(36), primary_key=True)
     title = Column(String(100), nullable=False)
-    author = Column(String(100), nullable=False)
-    cover = Column(Text())
-    synopsis = Column(Text())
-    uploadedby = Column(String(36), ForeignKey('users.id'))
-
-
-class RegisterUser(BaseModel):
-    name: str
-    email: str
-    password: str
-
-
-@app.post("/register/")
-async def register(user: RegisterUser):
-    pwd = bcrypt.hashpw(user.password.encode('utf8'), bcrypt.gensalt(15))
-
-    new_user = User(id=str(uuid()), name=user.name,
-                    email=user.email, password=pwd)
-
-    session.add(new_user)
-    session.commit()
-
-    return new_user
-
-
-class LoginUser(BaseModel):
-    email: str
-    password: str
-
-
-@app.post("/login/")
-async def login(user: LoginUser):
-    res: User = session.execute(select(User).where(
-        User.email == user.email)).scalars().all()[0]
-
-    if bcrypt.checkpw(user.password.encode('utf8'), res.password):
-        return {"Pog": "kek"}
+    file_loc = Column(String(256))
+    cover = Column(String(256))
 
 
 @app.post("/file/")
-async def create_upload_file(file: UploadFile = File(...)):
-    with open(f"./static/{file.filename}", "wb") as f:
+async def create_upload_file(file: UploadFile = File(...), title: str = Form(...), cover: str = Form(...)):
+    loc = f"./books/{file.filename}"
+
+    new_book = Book(id=uuid(), title=title, file_loc=f"http://localhost:8000/books/{file.filename}", cover=cover)
+    session.add(new_book)
+    session.commit()
+
+    with open(loc, "wb") as f:
         f.write(await file.read())
 
 
 @app.get("/")
 async def home():
-    return {"hello": "henlo!"}
+    data = {}
+    for book in session.query(Book).all():
+        data[book.title] = {'loc': book.file_loc, 'cover': book.cover}
+
+    return data
 
 
 meta: MetaData = Base.metadata
 meta.create_all(engine)
-print(app)
