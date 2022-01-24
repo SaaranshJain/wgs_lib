@@ -44,9 +44,7 @@ const MiniDrawer: FC = ({ children }) => {
                     </Typography>
                 </Toolbar>
             </AppBar>
-            <section style={{ width: '100%', height: '100%', paddingLeft: '1rem' }}>
-                {children}
-            </section>
+            <section style={{ width: '100%', height: '100%', paddingLeft: '1rem' }}>{children}</section>
         </Box>
     );
 };

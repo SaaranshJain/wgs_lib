@@ -2,30 +2,26 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from pydantic import BaseModel
-
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import Session
-from sqlalchemy.sql.schema import MetaData, Column, ForeignKey
-from sqlalchemy.sql.sqltypes import String, Text, LargeBinary
+from sqlalchemy.sql.schema import MetaData, Column
+from sqlalchemy.sql.sqltypes import String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy import select
+from sqlalchemy.orm import sessionmaker
 
 from uuid import uuid4 as uuid
-import bcrypt
 
 engine = create_engine("mariadb://admin:@localhost/wgs_lib", echo=True)
 session: Session = sessionmaker(bind=engine)()
 
 app = FastAPI()
-app.mount("/books", StaticFiles(directory="books"), name="books")
+sup=FastAPI()
+sup.mount("/books", StaticFiles(directory="books"), name="books")
 Base = declarative_base()
 
 
 origins = [
-    "http://localhost:8000",
-    "http://localhost:3000",
+    "http://localhost:3000"
 ]
 
 app.add_middleware(
@@ -45,7 +41,7 @@ class Book(Base):
     cover = Column(String(256))
 
 
-@app.post("/file/")
+@sup.post("/file")
 async def create_upload_file(file: UploadFile = File(...), title: str = Form(...), cover: str = Form(...)):
     loc = f"./books/{file.filename}"
 
@@ -57,7 +53,7 @@ async def create_upload_file(file: UploadFile = File(...), title: str = Form(...
         f.write(await file.read())
 
 
-@app.get("/")
+@sup.get("/")
 async def home():
     data = {}
     for book in session.query(Book).all():
@@ -65,6 +61,7 @@ async def home():
 
     return data
 
+app.mount('/wgs_lib/backend', sup)
 
 meta: MetaData = Base.metadata
 meta.create_all(engine)

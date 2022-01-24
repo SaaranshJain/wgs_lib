@@ -1,8 +1,7 @@
-import { Box, Button, TextField } from '@mui/material';
+import { Box, Button, Snackbar, TextField } from '@mui/material';
 import type { NextPage } from 'next';
-import { useState, ChangeEvent, useEffect } from 'react';
+import { useState, ChangeEvent } from 'react';
 import axios from 'axios';
-import { FormEvent } from 'react-transition-group/node_modules/@types/react';
 import { useRouter } from 'next/dist/client/router';
 
 interface Doc {
@@ -14,21 +13,8 @@ const UploadPage: NextPage = () => {
     const [title, setTitle] = useState('');
     const [chosenFileName, setChosenFileName] = useState('No file chosen');
     const [file, setFile] = useState<File | null>(null);
-    const [cover, setCover] = useState('kek');
     const [choices, setChoices] = useState<Doc[]>([]);
-
-    useEffect(() => {
-        if (!file || cover === 'kek') {
-            return;
-        }
-
-        const body = new FormData();
-        body.append('file', file);
-        body.append('title', title);
-        body.append('cover', cover);
-        
-        axios.post('http://localhost:8000/file', body).then(() => router.push('/'));
-    }, [cover]);
+    const [snackbarMsg, setSnackbarMsg] = useState<string | null>(null);
 
     const router = useRouter();
 
@@ -63,20 +49,8 @@ const UploadPage: NextPage = () => {
             noValidate
             autoComplete="off"
             style={{ marginTop: '6rem', marginLeft: '2rem' }}
-            onSubmit={async (ev: FormEvent) => {
-                ev.preventDefault();
-
-                const res = await axios.get<{ docs: Doc[] }>(
-                    `https://openlibrary.org/search.json?q=${encodeURIComponent(
-                        title
-                    )}&_facet=false&_spellcheck_count=0&limit=10&fields=title,cover_edition_key&mode=everything`
-                );
-
-                setChoices(Array.from(new Set(res.data.docs)));
-                
-                setCover(choices.find(v => v.title === title)?.cover_edition_key || 'kek');
-            }}
         >
+            {snackbarMsg && <Snackbar message={snackbarMsg} />}
             <TextField
                 required
                 onChange={handleSetChoices}
@@ -97,7 +71,34 @@ const UploadPage: NextPage = () => {
             </Button>
             <label>{chosenFileName}</label>
             <br />
-            <Button variant="contained" type="submit">
+            <Button
+                variant="contained"
+                onClick={async () => {
+                    const res = await axios.get<{ docs: Doc[] }>(
+                        `https://openlibrary.org/search.json?q=${encodeURIComponent(
+                            title
+                        )}&_facet=false&_spellcheck_count=0&limit=10&fields=title,cover_edition_key&mode=everything`
+                    );
+
+                    const newCover = Array.from(new Set(res.data.docs)).find(v => v.title === title)?.cover_edition_key;
+
+                    console.log(file, newCover);
+
+                    if (!file || !newCover) {
+                        return;
+                    }
+
+                    const body = new FormData();
+                    body.append('file', file);
+                    body.append('title', title);
+                    body.append('cover', newCover);
+
+                    axios
+                        .post('https://lookatthose.rocks/wgs_lib/backend/file/', body)
+                        .then(() => router.push('/'))
+                        .catch(() => setSnackbarMsg('Failed to upload file, try a smaller file'));
+                }}
+            >
                 Upload
             </Button>
         </Box>
